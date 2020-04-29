@@ -113,6 +113,6 @@ int main()
         delete_points(data, cluster);
     }
     print_m(result);
-	cout<<"help me";
+    cout<<"help me";
     return 0;
 }
