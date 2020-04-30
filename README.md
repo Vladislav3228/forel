@@ -1,13 +1,14 @@
-# forel
-
 #include <iostream>
 #include <vector>
 #include <cmath>
 #include <map>
+#include <time.h>
+#include <omp.h>
 using namespace std;
 
 double dist(vector<double> a, vector<double> b){
     double d = 0;
+#pragma omp parallel for
     for (int i = 0; i < a.size(); i++){
         d+=(a[i]-b[i])*(a[i]-b[i]);
     }
@@ -19,10 +20,10 @@ vector<double> init_center(vector< vector<double> > data){
 }
 
 vector< vector <double> > clustering(vector< vector<double> > data, vector<double> center, double width){
-    int i;
     double range;
     vector< vector <double> > cluster;
-    for (i = 0; i < data.size(); i++){
+#pragma omp parallel for
+    for (int i = 0; i < data.size(); i++){
         range = dist(center, data[i]);
         if(range <= width){
             cluster.push_back(data[i]);
@@ -40,6 +41,7 @@ vector<double> avg(vector< vector <double> > cluster){
             new_center[j]+=cluster[i][j];
         }
     }
+#pragma omp parallel for
     for (j = 0; j < cluster[0].size(); j++){
         new_center[j]/=cluster.size();
     }
@@ -81,6 +83,7 @@ void print_m(map< int , vector< vector< double > > > m){
         cout<<it->first<<endl;
         print_v2(it->second);
     }
+    cout<<"size : "<<m.size()<<endl;
 }
 
 vector< vector<double> > init_data(int n, int m){
@@ -93,14 +96,10 @@ vector< vector<double> > init_data(int n, int m){
     return data;
 }
 
-int main()
-{
-    int i, n, m;
-    double width = 5;
+map< int , vector< vector<double> > > forel(int n, int m, double width){
     map< int , vector< vector<double> > > result;
-    cin>>n>>m;
     vector< vector< double > > data = init_data(n, m);
-    for(i = 0 ; !data.empty() ; i++){
+    for(int i = 0 ; !data.empty() ; i++){
         vector< double > old_center = init_center(data);
         vector< vector< double > > cluster = clustering(data, old_center, width);
         vector< double > new_center = avg(cluster);
@@ -112,7 +111,30 @@ int main()
         result[i] = cluster;
         delete_points(data, cluster);
     }
-    print_m(result);
-    cout<<"help me";
+    return result;
+}
+
+int main()
+{
+    int i, j, n, m, width;
+    double c;
+    
+    clock_t start_time, finish_time;
+    cout<<"Введите ширину окна в процентах (0-100) от максимального расстояния между двумя точками : ";
+    cin>>width;
+    for(j = 1; j <= 4; j++){
+        omp_set_num_threads(j);
+        for(i = 250; i <= 1000; i+=250){
+            cout<<i<<endl;
+            start_time = clock();
+            c = 9.0 * pow(i, 0.5) * width / 100;
+            map< int , vector< vector<double> > > f = forel(i, i, c);
+            //print_m(f);
+            //cout<<"c : "<<c<<", "<<9.0 * pow(i, 0.5)<<endl;
+            finish_time = clock();
+            cout << double(finish_time - start_time) / CLOCKS_PER_SEC << " seconds" << endl;
+        }
+    }
+	cout<<"help me, i am dead inside";
     return 0;
 }
